@@ -56,3 +56,29 @@ ggplot(svyess.difference, aes(x=reorder(cntry, mean), y=mean))+
   geom_col()
 
 ```
+
+
+## Q5 
+
+Are people in EU member countries more or less likely to hold strong national attachments? Are there other aspects of people’s region of residence that correlate with national attachments?
+```{r}
+eu_countries <- c("AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "DE", "GR", "HU", "IE", "IT", "LV", "LT", "LU", "MT", "NL", "PL", "PT", "RO", "SK", "SI", "ES", "SE")
+
+svyess <- ess|>
+  as_survey_design(
+    ids = psu,
+    strata= stratum,
+    weight= anweight,
+    nest=T)|>
+  mutate(is_eu = cntry %in% eu_countries)|>
+  mutate(difference = atchctr-atcherp)|>
+  select(cntry, difference, is_eu)|>
+  drop_na()
+
+svyess.difference2 <- svyess|>
+  group_by(cntry, is_eu)|>
+  summarize(mean=mean(difference))
+  
+ggplot(svyess.difference2, aes(x=reorder(cntry, mean), y=mean, fill=is_eu))+
+  geom_col()
+```
