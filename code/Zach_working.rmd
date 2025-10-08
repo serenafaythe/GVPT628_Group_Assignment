@@ -8,28 +8,74 @@ output:
 ---
 
 ```{r, echo=FALSE} 
-library(faraway)
-library(dplyr)
 library(tidyverse)
-library(ISLR2)
-library(mgcv)
-library(MASS)
-library(leaps)
-library(janitor)
-library(sandwich)
-library(lmtest)
-library(ggplot2)
-library(caret)       
-library(boot)     
-library(pROC)         
-library(arm) 
-library(pROC)
-library(DataExplorer)
-library(factoextra)
 library(haven)
-```
+library(srvyr)
 
-```{r}
 ess<- read_dta("ESS11.dta")
+
+ess.interest <- ess|>
+  select(cntry, region, domicil, atcherp, atchctr, vteurmmb, anweight)
 ```
 
+variables: atcherp - attachment to Europe
+           atchctr - attachment to Country
+           
+
+## Q1
+Are European people more emotionally attached “Europe” or to their individual countries of residence?
+```{r}
+
+summary(ess.interest$atcherp, na.rm=T)
+summary(ess.interest$atchctr, na.rm=T)
+```
+People are more emotionally attached to their country (median and mean are both higher).
+
+
+## Q2
+How does this vary across countries or regions?
+```{r}
+
+svyess <- ess|>
+  as_survey_design(
+    ids = psu,
+    strata= stratum,
+    weight= anweight,
+    nest=T)|>
+  select(cntry, atcherp, atchctr)|>
+  mutate(difference = atchctr-atcherp)|>
+  drop_na()
+
+svyess.difference<- svyess|>
+  group_by(cntry)|>
+  summarize(mean=mean(difference))
+  
+ggplot(svyess.difference, aes(x=reorder(cntry, mean), y=mean))+
+  geom_col()
+```
+
+
+## Q5 
+
+Are people in EU member countries more or less likely to hold strong national attachments? Are there other aspects of people’s region of residence that correlate with national attachments?
+```{r}
+eu_countries <- c("AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "DE", "GR", "HU", "IE", "IT", "LV", "LT", "LU", "MT", "NL", "PL", "PT", "RO", "SK", "SI", "ES", "SE")
+
+svyess <- ess|>
+  as_survey_design(
+    ids = psu,
+    strata= stratum,
+    weight= anweight,
+    nest=T)|>
+  mutate(is_eu = cntry %in% eu_countries)|>
+  mutate(difference = atchctr-atcherp)|>
+  select(cntry, difference, is_eu)|>
+  drop_na()
+
+svyess.difference2 <- svyess|>
+  group_by(cntry, is_eu)|>
+  summarize(mean=mean(difference))
+  
+ggplot(svyess.difference2, aes(x=reorder(cntry, mean), y=mean))+
+  geom_col()
+```
